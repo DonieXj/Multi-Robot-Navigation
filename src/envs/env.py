@@ -80,14 +80,34 @@ class PassageEnv(VectorEnv):
 
         self.vector_reset()
         # Add wall and obstacles here
+        #self.obstacles = [
+         #   {
+          #      "min": [self.cfg["gap_length"] / 2, -self.cfg["wall_width"] / 2],
+           #     "max": [self.cfg["world_dim"][X] / 2, self.cfg["wall_width"] / 2],
+            #},
+            #{
+             #   "min": [-self.cfg["world_dim"][X] / 2, -self.cfg["wall_width"] / 2],
+              #  "max": [-self.cfg["gap_length"] / 2, self.cfg["wall_width"] / 2],
+            #},
+        #]
+
+        # Add wall and obstacles here
         self.obstacles = [
             {
-                "min": [self.cfg["gap_length"] / 2, -self.cfg["wall_width"] / 2],
-                "max": [self.cfg["world_dim"][X] / 2, self.cfg["wall_width"] / 2],
+                "min": [-3,-2.5],
+                "max": [-1,-1],
             },
             {
-                "min": [-self.cfg["world_dim"][X] / 2, -self.cfg["wall_width"] / 2],
-                "max": [-self.cfg["gap_length"] / 2, self.cfg["wall_width"] / 2],
+                "min": [1,-2.5],
+                "max": [3,-1],
+            },
+            {
+                "min": [-3,-0.5],
+                "max": [-0.5,2.5],
+            },
+            {
+                "min": [0.5,-0.5],
+                "max": [3,2.5],
             },
         ]
 
@@ -173,10 +193,10 @@ class PassageEnv(VectorEnv):
         starts = generate_rotated_formation()
 
         starts[:, :, X] += rand_n_agents(-box[X], box[X])
-        starts[:, :, Y] += rand_n_agents(-box[Y], -self.cfg["placement_keepout_wall"])
+        starts[:, :, Y] += rand_n_agents(-4.5, -3.5)
         goals = generate_rotated_formation()
         goals[:, :, X] += rand_n_agents(-box[X], box[X])
-        goals[:, :, Y] += rand_n_agents(self.cfg["placement_keepout_wall"], box[Y])
+        goals[:, :, Y] += rand_n_agents(4, box[Y])
         return starts, goals
 
     def vector_reset(self) -> List[EnvObsType]:
@@ -431,19 +451,25 @@ if __name__ == "__main__":
             "num_envs": 3,
             "device": "cpu",
             "n_agents": 5,
+            # Modified: scale 0.6 and formation
             "agent_formation": (
-                torch.Tensor([[-1, -1], [-1, 1], [0, 0], [1, -1], [1, 1]]) * 0.6
+                torch.Tensor([[1,0], [math.cos(72), math.sin(72)], 
+                              [math.cos(272), math.sin(272)], 
+                              [math.cos(372), math.sin(372)], 
+                              [math.cos(472), math.sin(472)]]) * 0.3
             ).tolist(),
+
             "placement_keepout_border": 1.0,
             "placement_keepout_wall": 1.5,
             "pos_noise_std": 0.0,
             "max_time_steps": 10000,
-            #Modified: wall_width 0.3
+            # Modified: wall_width 0.3
             "wall_width": 0.5,
-            #Modified: gap_length 1.0
+            # Modified: gap_length 1.0
             "gap_length": 2.0,
             "grid_px_per_m": 40,
-            "agent_radius": 0.25,
+            # Modified: agent_radius : 0.25
+            "agent_radius": 0.1,
             "render": False,
             "render_px_per_m": 160,
             "max_v": 10.0,
