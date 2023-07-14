@@ -1,6 +1,7 @@
 from typing import Dict
 import numpy as np
 import ray
+import math
 from ray import tune
 from ray.tune.registry import register_env
 from ray.tune.logger import DEFAULT_LOGGERS
@@ -16,7 +17,6 @@ from rllib_multi_agent_demo.multi_trainer import MultiPPOTrainer
 from rllib_multi_agent_demo.multi_action_dist import (
     TorchHomogeneousMultiActionDistribution,
 )
-
 
 def initialize():
     ray.init(
@@ -35,6 +35,21 @@ def initialize():
 
 def train():
     num_workers = 5
+    # Initial pentagon formation coordinates, normalized
+    pentagon_coords = np.array([
+        [np.cos(2 * np.pi * i / 5 + np.pi/2 + np.pi/6), np.sin(2 * np.pi * i / 5 + np.pi/2 + np.pi/6)]
+        for i in range(5)
+    ])
+
+    # Define your desired scale factor
+    scale_factor = 0.5
+
+    # Scale the coordinates
+    scaled_pentagon_coords = pentagon_coords * scale_factor
+
+    # Convert to list for use in the configuration dictionary
+    agent_formation = scaled_pentagon_coords.tolist()
+
     tune.run(
         MultiPPOTrainer,
         # restore="/home/jb2270/ray_results/PPO/PPO_world_0_2020-04-04_23-01-16c532w9iy/checkpoint_100/checkpoint-100",
@@ -71,27 +86,26 @@ def train():
                 },
             },
             "env_config": {
-                "world_dim": (6.0, 8.0),
+                "world_dim": (6.0, 10.0),
                 "dt": 0.05,
                 "num_envs": 32,
                 "device": "cpu",
                 "n_agents": 5,
                 # Changed the agent formation to pentagon
 
-                "agent_formation": (
-                    np.array([[-1, -1], [-1, 1], [0, 0], [1, -1], [1, 1]]) * 0.6
-                ).tolist(),
+                "agent_formation": agent_formation, 
                 "placement_keepout_border": 1.0,
                 "placement_keepout_wall": 1.5,
                 "pos_noise_std": 0.0,
                 "max_time_steps": 500,
                 "communication_range": 2.0,
-                #Modified: wall_width 0.3
-                "wall_width": 0.3,
-                #Modified: gap_length 1.0
+                # Modified: wall_width 0.3
+                "wall_width": 5,
+                # Modified: gap_length 1.0
                 "gap_length": 2.3,
                 "grid_px_per_m": 40,
-                "agent_radius": 0.25,
+                # Modified: agent_radius : 0.25
+                "agent_radius": 0.15,
                 "render": False,
                 "render_px_per_m": 160,
                 "max_v": 1.5,
@@ -99,6 +113,7 @@ def train():
                 "min_a": -1.0,
             },
             "render_env": False,
+            # training video will be generated based on the evaluation interval
             "evaluation_interval": 50,
             "evaluation_num_episodes": 1,
             "evaluation_num_workers": 1,  # Run evaluation in parallel to training
