@@ -1,0 +1,63 @@
+<mujoco model="triton_lidar">
+  <compiler eulerseq="XYZ"/>
+  <default>
+    <default class="unused"/>
+  </default>
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.10000000000000001 0.20000000000000001 0.29999999999999999" rgb2="0.20000000000000001 0.29999999999999999 0.40000000000000002" width="512" height="512"/>
+    <material name="grid" class="unused" texture="grid" texrepeat="1 1" texuniform="true" reflectance="0.20000000000000001"/>
+    <mesh name="triton" class="unused" file="triton.stl" scale="1 1 1"/>
+    <material name="material_1" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.95999997854232788 0.95999997854232788 0.95999997854232788 1"/>
+    <material name="material_2" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.68000000715255737 0.68000000715255737 0.68000000715255737 1"/>
+    <material name="material_3" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.68000000715255737 0.68000000715255737 0.68000000715255737 1"/>
+    <material name="material_4" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.68000000715255737 0.68000000715255737 0.68000000715255737 1"/>
+    <material name="material_5" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.68000000715255737 0.68000000715255737 0.68000000715255737 1"/>
+  </asset>
+  <worldbody>
+    <geom name="floor" class="unused" type="plane" condim="3" size="0 0 0.050000000000000003" material="grid" pos="0 0 -1"/>
+
+    <body name="link_1" pos="0 0 0.035000000000000003" euler="0 -0 0">
+
+      <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+      <geom name="collision" class="unused" type="cylinder" group="3" size="0.10000000000000001 0.002" friction="1 0.0050000000000000001 0.0001" pos="0 0 0.035" euler="0 -0 0"/>
+      <geom name="visual" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="material_1" pos="0 0 0" euler="0 -0 0" mesh="triton"/>
+      <freejoint name="freejoint"/>
+
+      <body name="lidar" pos="0 0 -0.035000000000000003" euler="0 -0 0">
+        <inertial pos="0 0 0.161" mass="0.125" fullinertia="0.001 0.001 0.001 0 0 0"/>
+        <geom name="lidar_sensor_collision" class="unused" type="cylinder" size="0.0508 0.0208" friction="1 0.0050000000000000001 0.0001" pos="0 0 0.161" euler="0 -0 0"/>
+        <!--geom name="lidar_sensor_visual" class="unused" type="cylinder" contype="0" conaffinity="0" group="0" size="0.0508 0.0000000001" material="material_2" pos="0 0 0.161" euler="0 -0 0"/>-->
+        <site name="hls_lfcd_lds" class="unused" pos="0 0 0.17100000000000001" euler="0 -0 0"/>
+      </body>
+
+      <body name="link_1_0_clone_clone_0" pos="-0.11 0 0.03" euler="0.0045263665815347721 89.95437383555452 0.0041825919044565273">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="collision_0" class="unused" type="cylinder" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" euler="0 0 0"/>
+        <!--This is one of the wheels-->
+        <geom name="visual_0" class="unused" type="cylinder" contype="0" conaffinity="0" group="0" size="0.029999999999999999 0.0074999999999999997" material="material_3" pos="-1.0408340855860843e-17 0 -1.3877787807814457e-17" euler="6.2957858083358728e-37 -2.9731007884611702e-15 -2.4265706493099341e-20"/>
+        <joint name="link_1_JOINT_1" class="unused" type="hinge" pos="-1.0408340855860843e-17 0 -1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+
+      <body name="link_1_0_clone" pos="0.055 0.095000000000000001 0.03" euler="119.99913469661091 89.954373835546534 0.00017188733800956195">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="collision_1" class="unused" type="cylinder" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" euler="0 0 0"/>
+        <geom name="visual_0_0" class="unused" type="cylinder" contype="0" conaffinity="0" group="0" size="0.029999999999999999 0.0074999999999999997" material="material_4" pos="0 -1.7347234759768071e-17 1.3877787807814457e-17" euler="0 -0 0"/>
+        <joint name="link_1_JOINT_2" class="unused" type="hinge" pos="0 -1.7347234759768071e-17 1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+
+      <body name="link_1_0_clone_clone" pos="0.055 -0.095000000000000001 0.03" euler="-119.9928321608599 89.954373835546534 0.0052712117170394205">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="collision_2" class="unused" type="cylinder" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" euler="0 0 0"/>
+        <geom name="visual_0_1" class="unused" type="cylinder" contype="0" conaffinity="0" group="0" size="0.029999999999999999 0.0074999999999999997" material="material_5" pos="6.9388939039072284e-18 -3.1225022567582528e-17 -1.3877787807814457e-17" euler="0 -0 0"/>
+        <joint name="link_1_JOINT_3" class="unused" type="hinge" pos="6.9388939039072284e-18 -3.1225022567582528e-17 -1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor gear="0.5" joint="link_1_JOINT_1"/>
+    <motor gear="0.5" joint="link_1_JOINT_2"/>
+    <motor gear="0.5" joint="link_1_JOINT_3"/>
+  </actuator>  
+</mujoco>
