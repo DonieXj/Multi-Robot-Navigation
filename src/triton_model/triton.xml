@@ -1,0 +1,106 @@
+<mujoco model="triton_lidar">
+  <!-- compiler eulerseq="XYZ"/-->
+  <!-- wheel, camara, cover, lidar, light, light_holding, board, down body, screw-->
+  <compiler angle="degree" coordinate="local" eulerseq="XYZ"/>
+  <default>
+    <default class="unused"/>
+    <joint armature="1" damping="1" limited="false"/>
+  </default>
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.10000000000000001 0.20000000000000001 0.29999999999999999" rgb2="0.20000000000000001 0.29999999999999999 0.40000000000000002" width="512" height="512"/>
+    <material name="grid" class="unused" texture="grid" texrepeat="1 1" texuniform="true" reflectance="0.20000000000000001"/>
+
+    <mesh name="triton" class="unused" file="my_triton_body_standard2.stl" scale="1 1 1"/>
+    <mesh name="left_wheel" class="unused" file="new_wheel.stl" />
+    <mesh name="camara" class="unused" file="camara.stl" />
+    <mesh name="cover" class="unused" file="my_triton_cover.stl" />
+    <mesh name="lidar" class="unused" file="my_triton_lidar.stl" />
+    <mesh name="light" class="unused" file="my_triton_light.stl" />
+    <mesh name="light_holding" class="unused" file="my_triton_light_holding.stl" />
+    <mesh name="board" class="unused" file="my_triton_board.stl" />
+    <mesh name="downboard" class="unused" file="my_triton_downboard.stl" />
+
+    <material name="black" class="unused" emission="0" specular="0.0099999997764825821" rgba="0 0 0 1"/>
+    <material name="silver" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.75 0.75 0.75 1"/>
+    <material name="blue" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.51 0.85 0.82 1"/>
+    <material name="orange" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.85 0.30 0.1 1"/>
+    <material name="grey" class="unused" emission="0" specular="0.0099999997764825821" rgba="0.3 0.3 0.3 1"/>
+
+  </asset>
+  <worldbody>
+    <light name="light_1" directional="true" diffuse=".8 .8 .8" specular=".1 .1 .1" pos="0 0 1" dir="0 0 -1"/>
+    <geom name="floor" class="unused" type="plane" condim="3" size="0 0 0.050000000000000003" material="grid" pos="0 0 -1"/>
+
+    <body name="triton" pos="0 0 0.035000000000000003" euler="0 -0 0">
+
+      <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+      <geom name="triton_body" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="silver" pos="0 0 -0.02" euler="0 -0 -30" mesh="triton"/>
+
+      <geom name="camara" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="grey" pos="0 0 0" euler="0 -0 -30" mesh="camara"/>
+      <geom name="cover" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="blue" pos="0 0 0" euler="0 -0 -30" mesh="cover"/>
+
+      <geom name="light" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="blue" pos="0 0 0" euler="0 -0 -30" mesh="light"/>
+      <geom name="light_holding" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="light_holding"/>
+      <geom name="board" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="board"/>
+      <geom name="downboard" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="downboard"/>
+      
+      <geom name="lidar" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="grey" pos="0 0 0" euler="0 -0 -30" mesh="lidar"/>
+      <geom name="collision" class="unused" type="cylinder" size="0.10 0.002" group="2" friction="1 0.0050000000000000001 0.0001" pos="0 0 0.035" euler="0 -0 0"/>
+
+      <joint name="trition_body" armature="1" damping="1" type="free"/>
+
+      <body name="lidar" pos="0 0 -0.035000000000000003" euler="0 -0 0">
+        <inertial pos="0 0 0.161" mass="0.125" fullinertia="0.001 0.001 0.001 0 0 0"/>
+        <geom name="lidar_collision" class="unused" type="cylinder" group="2" size="0.045 0.0208" friction="1 0.0050000000000000001 0.0001" pos="0 0 0.161" euler="0 -0 0"/>
+        <site name="hls_lfcd_lds" class="unused" pos="0 0 0.17100000000000001" euler="0 -0 0"/>
+      </body>
+
+      <body name="right_wheel_link" pos="-0.11 0 0.03" euler="0.0045263665815347721 89.95437383555452 0.0041825919044565273">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="right_wheel_collision" class="unused" type="cylinder"  group = "2" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" />
+        <!--This is one of the wheels-->
+        <geom name="right_visual" class="unused" type="mesh" contype="0" conaffinity="0" group="1" size="0.029999999999999999 0.0074999999999999997" material="grey" pos="0 0 0" euler="90 0 0" mesh="left_wheel"/>
+        <joint name="right_wheel" class="unused" type="hinge" pos="-1.0408340855860843e-17 0 -1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+
+      <body name="back_wheel_link" pos="0.055 0.095 0.03" euler="119.99913469661091 89.954373835546534 0.00017188733800956195">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="back_wheel_collision" class="unused" type="cylinder"  size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" />
+        <geom name="back_visual" class="unused" type="mesh" contype="0" conaffinity="0" group="1" size="0.029999999999999999 0.0074999999999999997" material="grey" pos="0 0 0" euler="90 0 0" mesh="left_wheel" />
+        <joint name="back_wheel" class="unused" type="hinge" pos="0 -1.7347234759768071e-17 1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+
+      <body name="left_wheel_link" pos="0.055 -0.095 0.03" euler="-119.9928321608599 89.954373835546534 0.0052712117170394205">
+        <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
+        <geom name="left_wheel_collision" class="unused" type="cylinder"  size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" />
+        <geom name="left_visual" class="unused" type="mesh" contype="0" conaffinity="0" group="1" size="0.029999999999999999 0.0074999999999999997" material="grey" pos="0 0 0" euler="90 0 0" mesh="left_wheel"/>
+        <joint name="left_wheel" class="unused"  type="hinge" pos="6.9388939039072284e-18 -3.1225022567582528e-17 -1.3877787807814457e-17" axis="0 0 1"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <tendon>
+    <fixed name = "go_foward">
+      <joint joint = "right_wheel" coef = "1"/>
+      <joint joint = "left_wheel" coef = "-1"/>
+    </fixed>
+
+    <fixed name = "turn">
+      <joint joint = "right_wheel" coef = "1"/>
+      <joint joint = "left_wheel" coef = "1"/>
+      <joint joint = "back_wheel" coef = "1"/>
+    </fixed>
+
+
+  </tendon>
+
+  <actuator>
+    <motor name="right_wheel" gear="3" joint="right_wheel"/>
+    <motor name="back_wheel" gear="3" joint="back_wheel"/>
+    <motor name="left_wheel" gear="3" joint="left_wheel"/>
+
+    <motor name="go_forward" tendon="go_foward" gear="5"/>
+    <motor name="turn" tendon="turn" gear="3"/>
+    
+  </actuator>  
+</mujoco>
