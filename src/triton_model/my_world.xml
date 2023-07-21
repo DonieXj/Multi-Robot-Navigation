@@ -1,6 +1,6 @@
 <mujoco model="triton_lidar">
   <!-- compiler eulerseq="XYZ"/-->
-  <!-- wheel, camara, cover, lidar, light, light_holding, board, down body, screw-->
+  <!-- wheel, camara, cover, lidar, light, light_holding, board, down body-->
   <compiler angle="degree" coordinate="local" eulerseq="XYZ"/>
   <default>
     <default class="unused"/>
