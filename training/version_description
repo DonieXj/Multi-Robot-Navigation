@@ -1,0 +1,5 @@
+Formation_v0.1: Add formation control, also change the reward vector to top robot
+Formation_v0.2: change the state transfer value, but stuck before passage
+Formation_v0.3: change the state transfer value, but stuck in passage, some of the robots will 			look back
+Formation_v0.4: change the state transfer value, different between AFTER and before AFTER, but 			results are same as v0.3
+Formation_v0.5: change the reward vector back, applied to all robots

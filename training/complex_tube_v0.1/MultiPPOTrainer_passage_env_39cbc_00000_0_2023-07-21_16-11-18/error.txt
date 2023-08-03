@@ -1,0 +1,143 @@
+Failure # 1 (occurred at 2023-07-21_21-04-02)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.8/dist-packages/ray/tune/ray_trial_executor.py", line 1018, in get_next_executor_event
+    future_result = ray.get(ready_future)
+  File "/usr/local/lib/python3.8/dist-packages/ray/_private/client_mode_hook.py", line 105, in wrapper
+    return func(*args, **kwargs)
+  File "/usr/local/lib/python3.8/dist-packages/ray/worker.py", line 1925, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(ValueError): [36mray::MultiPPOTrainer.train()[39m (pid=237, ip=172.17.0.2, repr=MultiPPOTrainer)
+  File "/home/src/rllib_multi_agent_demo/multi_trainer.py", line 278, in loss
+    return ppo_surrogate_loss(self, model, dist_class, train_batch)
+  File "/home/src/rllib_multi_agent_demo/multi_trainer.py", line 165, in ppo_surrogate_loss
+    curr_action_dist = dist_class(logits, model)
+  File "/home/src/rllib_multi_agent_demo/multi_action_dist.py", line 75, in __init__
+    TorchBetaMulti(
+  File "/home/src/rllib_multi_agent_demo/multi_action_dist.py", line 34, in __init__
+    super().__init__(inputs, model)
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/models/torch/torch_action_dist.py", line 357, in __init__
+    self.dist = torch.distributions.Beta(concentration1=alpha, concentration0=beta)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/beta.py", line 36, in __init__
+    self._dirichlet = Dirichlet(concentration1_concentration0, validate_args=validate_args)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/dirichlet.py", line 52, in __init__
+    super(Dirichlet, self).__init__(batch_shape, event_shape, validate_args=validate_args)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/distribution.py", line 55, in __init__
+    raise ValueError(
+ValueError: Expected parameter concentration (Tensor of shape (4096, 2, 2)) of distribution Dirichlet(concentration: torch.Size([4096, 2, 2])) to satisfy the constraint IndependentConstraint(GreaterThan(lower_bound=0.0), 1), but found invalid values:
+tensor([[[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        ...,
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]]], device='cuda:0', grad_fn=<StackBackward0>)
+
+The above exception was the direct cause of the following exception:
+
+[36mray::MultiPPOTrainer.train()[39m (pid=237, ip=172.17.0.2, repr=MultiPPOTrainer)
+  File "/usr/local/lib/python3.8/dist-packages/ray/tune/trainable.py", line 337, in train
+    result = self.step()
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/agents/trainer.py", line 1090, in step
+    raise e
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/agents/trainer.py", line 1071, in step
+    step_attempt_results = self.step_attempt()
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/agents/trainer.py", line 1152, in step_attempt
+    step_results = self._exec_plan_or_training_iteration_fn()
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/agents/trainer.py", line 2171, in _exec_plan_or_training_iteration_fn
+    results = next(self.train_exec_impl)
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 779, in __next__
+    return next(self.built_iterator)
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 807, in apply_foreach
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 807, in apply_foreach
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 869, in apply_filter
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 869, in apply_filter
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 807, in apply_foreach
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 807, in apply_foreach
+    for item in it:
+  File "/usr/local/lib/python3.8/dist-packages/ray/util/iter.py", line 815, in apply_foreach
+    result = fn(item)
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/execution/train_ops.py", line 343, in __call__
+    results = policy.learn_on_loaded_batch(
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/policy/torch_policy.py", line 583, in learn_on_loaded_batch
+    tower_outputs = self._multi_gpu_parallel_grad_calc(device_batches)
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/policy/torch_policy.py", line 1130, in _multi_gpu_parallel_grad_calc
+    raise last_result[0] from last_result[1]
+ValueError: Expected parameter concentration (Tensor of shape (4096, 2, 2)) of distribution Dirichlet(concentration: torch.Size([4096, 2, 2])) to satisfy the constraint IndependentConstraint(GreaterThan(lower_bound=0.0), 1), but found invalid values:
+tensor([[[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        ...,
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]]], device='cuda:0', grad_fn=<StackBackward0>)
+ tracebackTraceback (most recent call last):
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/policy/torch_policy.py", line 1046, in _worker
+    self._loss(self, model, self.dist_class, sample_batch)
+  File "/home/src/rllib_multi_agent_demo/multi_trainer.py", line 278, in loss
+    return ppo_surrogate_loss(self, model, dist_class, train_batch)
+  File "/home/src/rllib_multi_agent_demo/multi_trainer.py", line 165, in ppo_surrogate_loss
+    curr_action_dist = dist_class(logits, model)
+  File "/home/src/rllib_multi_agent_demo/multi_action_dist.py", line 75, in __init__
+    TorchBetaMulti(
+  File "/home/src/rllib_multi_agent_demo/multi_action_dist.py", line 34, in __init__
+    super().__init__(inputs, model)
+  File "/usr/local/lib/python3.8/dist-packages/ray/rllib/models/torch/torch_action_dist.py", line 357, in __init__
+    self.dist = torch.distributions.Beta(concentration1=alpha, concentration0=beta)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/beta.py", line 36, in __init__
+    self._dirichlet = Dirichlet(concentration1_concentration0, validate_args=validate_args)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/dirichlet.py", line 52, in __init__
+    super(Dirichlet, self).__init__(batch_shape, event_shape, validate_args=validate_args)
+  File "/usr/local/lib/python3.8/dist-packages/torch/distributions/distribution.py", line 55, in __init__
+    raise ValueError(
+ValueError: Expected parameter concentration (Tensor of shape (4096, 2, 2)) of distribution Dirichlet(concentration: torch.Size([4096, 2, 2])) to satisfy the constraint IndependentConstraint(GreaterThan(lower_bound=0.0), 1), but found invalid values:
+tensor([[[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        ...,
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]],
+
+        [[nan, nan],
+         [nan, nan]]], device='cuda:0', grad_fn=<StackBackward0>)
+
+In tower 0 on device cuda:0
+
