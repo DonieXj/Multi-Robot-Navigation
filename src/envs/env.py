@@ -1,5 +1,6 @@
 import time
 import gym
+import numpy as np
 from ray.rllib.env.vector_env import VectorEnv
 from ray.rllib.utils.typing import (
     EnvActionType,
@@ -15,7 +16,7 @@ from gym.utils import seeding
 import torch
 import math
 import pygame
-
+from gym.envs.registration import registry
 from scipy.spatial.transform import Rotation as R
 
 X = 0
@@ -34,6 +35,14 @@ STATE_AFTER = 2  # moving towards the goal
 STATE_REACHED_GOAL = 3  # goal reached
 STATE_FINISHED = 4  # goal reached and reward bonus given
 
+if "MycustomEvn-v0" in registry.env_specs:
+    del registry.env_specs["MycustomEvn-v0"]
+
+# Register the environment
+gym.envs.register(
+    id="MycustomEvn-v0",
+    entry_point='env:PassageEnv',  # assuming 'env' is the correct module name
+)
 
 class PassageEnv(VectorEnv):
     def __init__(self, config):
@@ -79,38 +88,28 @@ class PassageEnv(VectorEnv):
         self.vec_p_shape = (self.cfg["num_envs"], self.cfg["n_agents"], 2)
 
         self.vector_reset()
-        # Add wall and obstacles here
-        #self.obstacles = [
-         #   {
-          #      "min": [self.cfg["gap_length"] / 2, -self.cfg["wall_width"] / 2],
-           #     "max": [self.cfg["world_dim"][X] / 2, self.cfg["wall_width"] / 2],
-            #},
-            #{
-             #   "min": [-self.cfg["world_dim"][X] / 2, -self.cfg["wall_width"] / 2],
-              #  "max": [-self.cfg["gap_length"] / 2, self.cfg["wall_width"] / 2],
-            #},
-        #]
 
         # Add wall and obstacles here
         self.obstacles = [
             {
                 "min": [-3,-2.5],
-                "max": [-1,-1],
+                "max": [-0.75,-0.5],
             },
             {
-                "min": [1,-2.5],
-                "max": [3,-1],
+                "min": [0.75,-2.5],
+                "max": [3,-0.5],
             },
             {
                 "min": [-3,-0.5],
-                "max": [-1,2.5],
+                "max": [-0.45,2.5],
             },
             {
-                "min": [1,-0.5],
+                "min": [0.45,-0.5],
                 "max": [3,2.5],
             },
         ]
 
+        # Initialize all imported pygame modules
         pygame.init()
         size = (
             (torch.Tensor(self.cfg["world_dim"]) * self.cfg["render_px_per_m"])
@@ -171,33 +170,28 @@ class PassageEnv(VectorEnv):
         return (a - b) * torch.rand(size).to(self.device) + b
 
     def get_starts_and_goals(self, n):
-        def generate_rotated_formation():
-            rot = torch.empty(n, 2, 2).to(self.device)
-            theta = self.rand(n, -math.pi, math.pi)
-            c, s = torch.cos(theta), torch.sin(theta)
-            rot[:, 0, 0] = c
-            rot[:, 0, 1] = -s
-            rot[:, 1, 0] = s
-            rot[:, 1, 1] = c
-            formation = torch.Tensor(self.cfg["agent_formation"]).to(self.device)
-            return torch.bmm(formation.repeat(n, 1, 1), rot)
+
+        # No different formation each time
 
         def rand_n_agents(a, b):
             return self.rand(n, a, b).unsqueeze(1).repeat(1, self.cfg["n_agents"])
 
-        # Change the size of box from 2.0 to 1.5
         box = (
             torch.Tensor(self.cfg["world_dim"]) / 2.0
             - self.cfg["placement_keepout_border"]
         )
-        starts = generate_rotated_formation()
+        formation = torch.Tensor(self.cfg["agent_formation"]).to(self.device)
 
+        starts = formation.repeat(n, 1, 1)
         starts[:, :, X] += rand_n_agents(-box[X], box[X])
-        starts[:, :, Y] += rand_n_agents(-4.5, -3.5)
-        goals = generate_rotated_formation()
+        starts[:, :, Y] += rand_n_agents(-3.6, -3.5)
+
+        goals = formation.repeat(n, 1, 1)
         goals[:, :, X] += rand_n_agents(-box[X], box[X])
         goals[:, :, Y] += rand_n_agents(4, box[Y])
+        
         return starts, goals
+
 
     def vector_reset(self) -> List[EnvObsType]:
         """Resets all sub-environments.
@@ -249,7 +243,23 @@ class PassageEnv(VectorEnv):
             * self.cfg["n_agents"],
         }
 
+    def barrier_lyapunov_function(actual_distance, desired_distance, lower_bound = 0.1, upper_bound = 0.2):
 
+        distance_error = np.abs(actual_distance - desired_distance)
+        quadratic_cost = distance_error ** 2
+
+        if distance_error <= lower_bound:
+            barrier_cost = -np.log(lower_bound - distance_error)
+
+        elif distance_error >= upper_bound:
+            barrier_cost = -np.log(distance_error - upper_bound)
+
+        else:
+            barrier_cost = 0
+        blf_value = quadratic_cost + barrier_cost
+
+        return blf_value
+    
     def vector_step(
         self, actions: List[EnvActionType]
     ) -> Tuple[List[EnvObsType], List[float], List[bool], List[EnvInfoDict]]:
@@ -290,9 +300,74 @@ class PassageEnv(VectorEnv):
             # penalty when colliding
             rewards[agents_coll, i] -= 1.5
 
+        #########################################################################
+        # Formation control
+        desired_side = math.sqrt(2) * 0.32
+        agent_distance = self.compute_agent_dists(next_ps_agent)
+
+        leftup_ds = agent_distance[:, 2, 1]
+        leftdown_ds = agent_distance[:, 1, 3]
+        left_ds = self.compute_agent_dists(next_ps_agent)[:, 2, 3]
+
+        rightup_ds = agent_distance[:, 2, 0]
+        rightdown_ds = agent_distance[:, 4, 0]
+        right_ds = self.compute_agent_dists(next_ps_agent)[:, 2, 4]
+
+        bottom_ds = agent_distance[:, 3, 4]
+        middle_ds = agent_distance[:, 1, 0]
+
+        leftup_penalty = torch.abs(desired_side - leftup_ds)
+        leftdown_penalty = torch.abs(desired_side - leftdown_ds)
+        left_penalty = torch.abs(desired_side - left_ds)
+
+        rightup_penalty = torch.abs(desired_side - rightup_ds)
+        rightdown_penalty = torch.abs(desired_side - rightdown_ds)
+        right_penalty = torch.abs(desired_side - right_ds)
+
+        bottom_penalty = torch.abs(2 * middle_ds - bottom_ds)
+
+        # Control the side distance
+        rewards[:, 1] -= leftup_penalty
+        rewards[:, 3] -= leftdown_penalty
+        rewards[:, 0] -= rightup_penalty
+        rewards[:, 4] -= rightdown_penalty
+
+        # rewards[:, 1] -= left_penalty
+        # rewards[:, 3] -= left_penalty
+        # rewards[:, 0] -= right_penalty
+        # rewards[:, 4] -= right_penalty
+
+        # Control the bottom distance
+        rewards[:, 0] -= bottom_penalty
+        rewards[:, 1] -= bottom_penalty
+        rewards[:, 3] -= bottom_penalty
+        rewards[:, 4] -= bottom_penalty
+
+        ########################################################################
+        # Maximize the scale of formation
+        agent3_cur_state = self.states[0, 3].item()
+        agent4_cur_state = self.states[0, 4].item()
         obstacle_ds = self.compute_obstacle_dists(next_ps)
+
+        if agent3_cur_state == 1.0 or agent4_cur_state == 1.0:
+    
+            agent3_min_obstacle_distance = torch.min(obstacle_ds[:, 3, :], dim=1)[0]
+            agent4_min_obstacle_distance = torch.min(obstacle_ds[:, 4, :], dim=1)[0]
+            desired_ds = 0.15 + self.cfg["agent_radius"]
+            agent3_distance_penalty = torch.abs(agent3_min_obstacle_distance - desired_ds)
+            agent4_distance_penalty = torch.abs(agent4_min_obstacle_distance - desired_ds)
+
+            # Control the scale formation
+            rewards[:, 0] -= agent4_distance_penalty
+            rewards[:, 1] -= agent3_distance_penalty
+            rewards[:, 3] -= agent3_distance_penalty
+            rewards[:, 4] -= agent4_distance_penalty
+
+        #######################################################################
+
+        # Prevent collisions between robots and walls
         obstacles_coll = torch.min(obstacle_ds, dim=2)[0] <= self.cfg["agent_radius"]
-        rewards[obstacles_coll] -= 0.25
+        rewards[obstacles_coll] -= 0.5
         self.ps[~obstacles_coll] = next_ps[~obstacles_coll]
 
         self.ps += self.sample_pos_noise()
@@ -302,6 +377,7 @@ class PassageEnv(VectorEnv):
 
         self.measured_vs = (self.ps - previous_ps) / self.cfg["dt"]
 
+        #######################################################################
         # update passage states
         wall_robot_offset = self.cfg["wall_width"] / 2 + self.cfg["agent_radius"]
         self.rew_vecs[self.states == STATE_INITIAL] = (
@@ -309,20 +385,23 @@ class PassageEnv(VectorEnv):
             - self.ps[self.states == STATE_INITIAL]
         )
         self.rew_vecs[self.states == STATE_PASSAGE] = (
-            torch.Tensor([0.0, wall_robot_offset])
+            torch.Tensor([0.0, 3.0])
             - self.ps[self.states == STATE_PASSAGE]
         )
+
         self.rew_vecs[self.states >= STATE_AFTER] = (
             self.goal_ps[self.states >= 2] - self.ps[self.states >= STATE_AFTER]
         )
         rew_vecs_norm = torch.linalg.norm(self.rew_vecs, dim=2)
 
-        # go from STATE_REACHED_GOAL to STATE_FINISHED unconditionally
         self.states[self.states == STATE_REACHED_GOAL] = STATE_FINISHED
         # move to next state if distance to waypoint is small enough
-        self.states[(self.states < STATE_REACHED_GOAL) & (rew_vecs_norm < 0.1)] += 1
+        # changed from 0.1 to 0.3
+        self.states[(self.states < STATE_AFTER) & (rew_vecs_norm < 0.5)] += 1
+        self.states[(self.states == STATE_AFTER) & (rew_vecs_norm < 0.3)] += 1
 
         # reward: dense shaped reward following waypoints
+        
         vs_norm = torch.linalg.norm(self.measured_vs, dim=2)
         rew_vecs_norm = torch.linalg.norm(self.rew_vecs, dim=2).unsqueeze(2)
         rewards_dense = (
@@ -332,7 +411,7 @@ class PassageEnv(VectorEnv):
             ).view(self.cfg["num_envs"], self.cfg["n_agents"])
             * vs_norm
         )
-        rewards[vs_norm > 0.0] += rewards_dense[vs_norm > 0.0]
+        rewards[vs_norm > 0.0] += 2.0 * rewards_dense[vs_norm > 0.0]
 
         # bonus when reaching the goal
         rewards[self.states == STATE_REACHED_GOAL] += 10.0
@@ -345,7 +424,9 @@ class PassageEnv(VectorEnv):
             {"rewards": {k: r for k, r in enumerate(env_rew)}}
             for env_rew in rewards.tolist()
         ]
+
         return obs, torch.sum(rewards, dim=1).tolist(), dones, infos
+
 
     def get_unwrapped(self) -> List[EnvType]:
         return []
@@ -393,6 +474,7 @@ class PassageEnvRender(PassageEnv):
 
         self.display.fill(BACKGROUND_COLOR)
         img = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
+        font = pygame.font.Font(None, 24)
 
         for agent_index in range(self.cfg["n_agents"]):
             agent_p = self.ps[index, agent_index]
@@ -420,6 +502,12 @@ class PassageEnvRender(PassageEnv):
                     2,
                 )
 
+            state = self.states[index, agent_index].item()  # Get the state of the robot
+            text = font.render('{}/{}'.format(state, agent_index), True, (0, 0, 0), (255, 255, 255))  # Prepare the text
+            text = pygame.transform.flip(text, True, False)  # Flip the text along the x-axis
+            textpos = text.get_rect(centerx=point_to_screen(agent_p)[0], centery=point_to_screen(agent_p)[1] - 20)  # Position the text
+            img.blit(text, textpos)  # Draw the text
+
         for o in self.obstacles:
             tl = point_to_screen([o["max"][X], o["min"][Y]])
             width = [
@@ -443,28 +531,36 @@ class PassageEnvRender(PassageEnv):
 
 
 if __name__ == "__main__":
-    env = PassageEnvRender(
-        {   
+    pentagon_coords = np.array([
+        [np.cos(2 * np.pi * i / 5 + np.pi/2 + np.pi/6), np.sin(2 * np.pi * i / 5 + np.pi/2 + np.pi/6)]
+        for i in range(5)
+    ])
+
+    # Define your desired scale factor
+    scale_factor = 0.5
+
+    # Scale the coordinates
+    scaled_pentagon_coords = pentagon_coords * scale_factor
+
+    # Convert to list for use in the configuration dictionary
+    agent_formation = scaled_pentagon_coords.tolist()
+
+    config = {   
             #Modified: world_dim (4.0, 6.0)
-            "world_dim": (6.0, 8.0),
+            "world_dim": (6.0, 10.0),
             "dt": 0.05,
             "num_envs": 3,
             "device": "cpu",
             "n_agents": 5,
             # Modified: scale 0.6 and formation
-            "agent_formation": (
-                torch.Tensor([[1,0], [math.cos(72), math.sin(72)], 
-                              [math.cos(272), math.sin(272)], 
-                              [math.cos(372), math.sin(372)], 
-                              [math.cos(472), math.sin(472)]]) * 0.3
-            ).tolist(),
+            "agent_formation": agent_formation,
 
             "placement_keepout_border": 1.0,
             "placement_keepout_wall": 1.5,
             "pos_noise_std": 0.0,
             "max_time_steps": 10000,
             # Modified: wall_width 0.3
-            "wall_width": 0.5,
+            "wall_width": 5.5,
             # Modified: gap_length 1.0
             "gap_length": 2.0,
             "grid_px_per_m": 40,
@@ -475,9 +571,8 @@ if __name__ == "__main__":
             "max_v": 10.0,
             "max_a": 5.0,
         }
-    )
+    '''
     import time
-
     torch.manual_seed(0)
     env.vector_reset()
     # env.reset()
@@ -511,4 +606,4 @@ if __name__ == "__main__":
         print(returns)
         if done:
             env.reset()
-            returns = torch.zeros((env.cfg["n_agents"]))
+            returns = torch.zeros((env.cfg["n_agents"]))'''
