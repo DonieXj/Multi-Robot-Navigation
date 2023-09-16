@@ -37,12 +37,12 @@ def train():
     num_workers = 5
     # Initial pentagon formation coordinates, normalized
     pentagon_coords = np.array([
-        [np.cos(2 * np.pi * i / 5 + np.pi/2 + np.pi/6), np.sin(2 * np.pi * i / 5 + np.pi/2 + np.pi/6)]
+        [np.cos(2 * np.pi * i / 5 + np.pi/2), np.sin(2 * np.pi * i / 5 + np.pi/2)]
         for i in range(5)
     ])
 
     # Define your desired scale factor
-    scale_factor = 0.5
+    scale_factor = 0.7
 
     # Scale the coordinates
     scaled_pentagon_coords = pentagon_coords * scale_factor
@@ -58,7 +58,7 @@ def train():
         checkpoint_score_attr="min-episode_len_mean",
         local_dir="./results",
         # local_dir="/tmp",
-        stop={"training_iteration": 1700},
+        stop={"training_iteration": 2500},
         config={
             "seed": 0,
             "framework": "torch",
@@ -71,7 +71,7 @@ def train():
             "num_sgd_iter": 18,
             "num_gpus": 1,
             "num_workers": num_workers,
-            "num_envs_per_worker": 9,
+            "num_envs_per_worker": 10,
             "lr": 5e-5,
             "gamma": 0.995,
             "batch_mode": "truncate_episodes",
@@ -91,30 +91,28 @@ def train():
                 "num_envs": 32,
                 "device": "cpu",
                 "n_agents": 5,
-                # Changed the agent formation to pentagon
-
-                "agent_formation": agent_formation, 
+                "agent_formation": agent_formation,
                 "placement_keepout_border": 1.0,
                 "placement_keepout_wall": 1.5,
                 "pos_noise_std": 0.0,
-                "max_time_steps": 500,
+                "max_time_steps": 750,
                 "communication_range": 2.0,
                 # Modified: wall_width 0.3
-                "wall_width": 5,
+                "wall_width": 5.0,
                 # Modified: gap_length 1.0
                 "gap_length": 2.3,
                 "grid_px_per_m": 40,
                 # Modified: agent_radius : 0.25
-                "agent_radius": 0.15,
+                "agent_radius": 0.1,
                 "render": False,
                 "render_px_per_m": 160,
-                "max_v": 1.5,
+                "max_v": 1.0,
                 "max_a": 1.0,
                 "min_a": -1.0,
             },
             "render_env": False,
             # training video will be generated based on the evaluation interval
-            "evaluation_interval": 50,
+            "evaluation_interval": 1,
             "evaluation_num_episodes": 1,
             "evaluation_num_workers": 1,  # Run evaluation in parallel to training
             "evaluation_parallel_to_training": True,
