@@ -91,22 +91,26 @@ class PassageEnv(VectorEnv):
 
         # Add wall and obstacles here
         self.obstacles = [
-            {
-                "min": [-3,-2.5],
-                "max": [-0.75,-0.5],
-            },
-            {
-                "min": [0.75,-2.5],
-                "max": [3,-0.5],
-            },
-            {
-                "min": [-3,-0.5],
-                "max": [-0.45,2.5],
-            },
-            {
-                "min": [0.45,-0.5],
-                "max": [3,2.5],
-            },
+            # down wall
+            {"min": [-1.6,-2],"max": [-1.2,-1.5],},
+            {"min": [-1.5,-1.5],"max": [-1.1,-1],},
+            {"min": [-1.4,-1],"max": [-1.0,-0.5],},
+            {"min": [-1.3,-0.5],"max": [-0.9,0],},
+            {"min": [-1.2,0],"max": [-0.8,0.5],},
+            {"min": [-1.1,0.5],"max": [-0.7,1],},
+            {"min": [-1.0,1],"max": [-0.6,1.5],},
+            {"min": [-0.9,1.5],"max": [-0.5,2],},
+            {"min": [-0.8,2],"max": [-0.4,2.5],},
+            # up wall
+            {"min": [1.2,-2],"max": [1.6,-1.5],},
+            {"min": [1.1,-1.5],"max": [1.5,-1],},
+            {"min": [1.0,-1],"max": [1.4,-0.5],},
+            {"min": [0.9,-0.5],"max": [1.3,0],},
+            {"min": [0.8,0],"max": [1.2,0.5],},
+            {"min": [0.7,0.5],"max": [1.1,1],},
+            {"min": [0.6,1],"max": [1.0,1.5],},
+            {"min": [0.5,1.5],"max": [0.9,2],},
+            {"min": [0.4,2],"max": [0.8,2.5],},
         ]
 
         # Initialize all imported pygame modules
@@ -131,8 +135,9 @@ class PassageEnv(VectorEnv):
 
     def compute_agent_dists(self, ps):
         agents_ds = torch.cdist(ps, ps)
+        num_agents = ps.shape[1]
         diags = (
-            torch.eye(self.cfg["n_agents"]).unsqueeze(0).repeat(len(ps), 1, 1).bool()
+            torch.eye(num_agents).unsqueeze(0).repeat(len(ps), 1, 1).bool()
         )
         agents_ds[diags] = float("inf")
         return agents_ds
@@ -293,6 +298,8 @@ class PassageEnv(VectorEnv):
         for i in range(self.cfg["n_agents"]):
             next_ps_agent = next_ps.clone()
             next_ps_agent[:, i] += possible_vs[:, i] * self.cfg["dt"]
+            # print("################position: ", i, next_ps_agent[:,i])
+
             agents_ds = self.compute_agent_dists(next_ps_agent)[:, i]
             agents_coll = torch.min(agents_ds, dim=1)[0] <= 2 * self.cfg["agent_radius"]
             # only update pos if there are no collisions
@@ -300,69 +307,99 @@ class PassageEnv(VectorEnv):
             # penalty when colliding
             rewards[agents_coll, i] -= 1.5
 
+
+        #########################################################################
+        # Get the average position to get the mid point of the formation
+        x_coordinates_sum = torch.sum(next_ps_agent[:,:,0], dim = 1)
+        y_coordinates_sum = torch.sum(next_ps_agent[:,:,1], dim = 1)
+        x_average = x_coordinates_sum / 5
+        y_average = y_coordinates_sum / 5
+        average_position = torch.stack((x_average, y_average), dim= 1)
+        
+        # Reshape average_positions from [32 x 2] to [32 x 1 x 2]
+        expanded_avg_positions = average_position.unsqueeze(1)
+
+        # Concatenate the expanded average positions with next_ps_agent along the agents' dimension
+        next_ps_agent_with_avg = torch.cat((next_ps_agent, expanded_avg_positions), dim=1)
         #########################################################################
         # Formation control
-        desired_side = math.sqrt(2) * 0.32
-        agent_distance = self.compute_agent_dists(next_ps_agent)
+        agent_distance = self.compute_agent_dists(next_ps_agent_with_avg)
 
-        leftup_ds = agent_distance[:, 2, 1]
-        leftdown_ds = agent_distance[:, 1, 3]
-        left_ds = self.compute_agent_dists(next_ps_agent)[:, 2, 3]
+        #########################################################################
+        # Circle Formation
+        # Make sure robot 0 is always be the leader
+        robot_0_position_y = next_ps_agent[:,0,1]
+        robot_1_position_y = next_ps_agent[:,1,1]
+        robot_2_position_y = next_ps_agent[:,2,1]
+        robot_3_position_y = next_ps_agent[:,3,1]
+        robot_4_position_y = next_ps_agent[:,4,1]
 
-        rightup_ds = agent_distance[:, 2, 0]
-        rightdown_ds = agent_distance[:, 4, 0]
-        right_ds = self.compute_agent_dists(next_ps_agent)[:, 2, 4]
+        # Element-wise comparisons
+        mask_4_0 = robot_4_position_y >= robot_0_position_y
+        mask_1_0 = robot_1_position_y >= robot_0_position_y
+        mask_2_1 = robot_2_position_y >= robot_1_position_y
+        mask_3_4 = robot_3_position_y >= robot_4_position_y
 
-        bottom_ds = agent_distance[:, 3, 4]
-        middle_ds = agent_distance[:, 1, 0]
+        # Update the rewards tensor based on the masks
+        rewards[mask_4_0, 4] -= 1
+        rewards[mask_1_0, 1] -= 1
+        rewards[mask_2_1, 2] -= 1
+        rewards[mask_3_4, 3] -= 1
 
-        leftup_penalty = torch.abs(desired_side - leftup_ds)
-        leftdown_penalty = torch.abs(desired_side - leftdown_ds)
-        left_penalty = torch.abs(desired_side - left_ds)
+        #########################################################################
+        # Calculate the center distance(radius)
+        expected_radius_length = 0.7
+        r4 = agent_distance[:, 4, 5]
+        r3 = agent_distance[:, 3, 5]
+        r2 = agent_distance[:, 2, 5]
+        r1 = agent_distance[:, 1, 5]
+        r0 = agent_distance[:, 0, 5]
 
-        rightup_penalty = torch.abs(desired_side - rightup_ds)
-        rightdown_penalty = torch.abs(desired_side - rightdown_ds)
-        right_penalty = torch.abs(desired_side - right_ds)
+        rewards[:, 4] -= torch.abs(r4 - expected_radius_length)
+        rewards[:, 3] -= torch.abs(r3 - expected_radius_length)
+        rewards[:, 2] -= torch.abs(r2 - expected_radius_length)
+        rewards[:, 1] -= torch.abs(r1 - expected_radius_length)
+        rewards[:, 0] -= torch.abs(r0 - expected_radius_length)
+        # Calculate the side distance by using radius
+        # Calculate average radius for each environment
+        average_radius = (r0 + r1 + r2 + r3 + r4) / 5
 
-        bottom_penalty = torch.abs(2 * middle_ds - bottom_ds)
+        # Calculate expected side length for each environment
+        # Side = 2 * radius * sin(pi/5)
+        expected_side_length = 2 * average_radius * torch.sin(torch.tensor(np.pi) / 5)
 
-        # Control the side distance
-        rewards[:, 1] -= leftup_penalty
-        rewards[:, 3] -= leftdown_penalty
-        rewards[:, 0] -= rightup_penalty
-        rewards[:, 4] -= rightdown_penalty
+        # Compute side lengths using agent distances
+        s04 = agent_distance[:, 0, 4]
+        s43 = agent_distance[:, 4, 3]
+        s32 = agent_distance[:, 3, 2]
+        s21 = agent_distance[:, 2, 1]
+        s10 = agent_distance[:, 1, 0]
 
-        # rewards[:, 1] -= left_penalty
-        # rewards[:, 3] -= left_penalty
-        # rewards[:, 0] -= right_penalty
-        # rewards[:, 4] -= right_penalty
-
-        # Control the bottom distance
-        rewards[:, 0] -= bottom_penalty
-        rewards[:, 1] -= bottom_penalty
-        rewards[:, 3] -= bottom_penalty
-        rewards[:, 4] -= bottom_penalty
-
+        # Calculate rewards based on deviation from expected side length
+        rewards[:, 4] -= torch.abs(s04 - expected_side_length)
+        rewards[:, 3] -= torch.abs(s43 - expected_side_length)
+        rewards[:, 2] -= torch.abs(s32 - expected_side_length)
+        rewards[:, 1] -= torch.abs(s21 - expected_side_length)
+        rewards[:, 0] -= torch.abs(s10 - expected_side_length)
         ########################################################################
         # Maximize the scale of formation
-        agent3_cur_state = self.states[0, 3].item()
+        agent1_cur_state = self.states[0, 1].item()
         agent4_cur_state = self.states[0, 4].item()
         obstacle_ds = self.compute_obstacle_dists(next_ps)
 
-        if agent3_cur_state == 1.0 or agent4_cur_state == 1.0:
+        if agent1_cur_state == 1.0 or agent4_cur_state == 1.0:
     
-            agent3_min_obstacle_distance = torch.min(obstacle_ds[:, 3, :], dim=1)[0]
+            agent1_min_obstacle_distance = torch.min(obstacle_ds[:, 1, :], dim=1)[0]
             agent4_min_obstacle_distance = torch.min(obstacle_ds[:, 4, :], dim=1)[0]
-            desired_ds = 0.15 + self.cfg["agent_radius"]
-            agent3_distance_penalty = torch.abs(agent3_min_obstacle_distance - desired_ds)
+            desired_ds = 0.1 + self.cfg["agent_radius"]
+            agent1_distance_penalty = torch.abs(agent1_min_obstacle_distance - desired_ds)
             agent4_distance_penalty = torch.abs(agent4_min_obstacle_distance - desired_ds)
 
             # Control the scale formation
-            rewards[:, 0] -= agent4_distance_penalty
-            rewards[:, 1] -= agent3_distance_penalty
-            rewards[:, 3] -= agent3_distance_penalty
-            rewards[:, 4] -= agent4_distance_penalty
-
+            rewards[:, 4] -= 2 * agent4_distance_penalty
+            rewards[:, 3] -= 2 * agent4_distance_penalty
+            rewards[:, 2] -= 2 * agent1_distance_penalty
+            rewards[:, 1] -= 2 * agent1_distance_penalty
         #######################################################################
 
         # Prevent collisions between robots and walls
@@ -411,7 +448,7 @@ class PassageEnv(VectorEnv):
             ).view(self.cfg["num_envs"], self.cfg["n_agents"])
             * vs_norm
         )
-        rewards[vs_norm > 0.0] += 2.0 * rewards_dense[vs_norm > 0.0]
+        rewards[vs_norm > 0.0] += 3.0 * rewards_dense[vs_norm > 0.0]
 
         # bonus when reaching the goal
         rewards[self.states == STATE_REACHED_GOAL] += 10.0
