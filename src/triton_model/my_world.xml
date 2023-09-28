@@ -38,7 +38,7 @@
       <geom name="camara" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="grey" pos="0 0 0" euler="0 -0 -30" mesh="camara"/>
       <geom name="cover" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="blue" pos="0 0 0" euler="0 -0 -30" mesh="cover"/>
       <geom name="light" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="blue" pos="0 0 0" euler="0 -0 -30" mesh="light"/>
-      <geom name="light_holding" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="light_holding"/>
+      <geom name="light_holding" class="unused" type="mesh" contype="0" conaffinity="0" group= "1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="light_holding"/>
       <geom name="board" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="board"/>
       <geom name="downboard" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="orange" pos="0 0 0" euler="0 -0 -30" mesh="downboard"/>
       <geom name="lidar" class="unused" type="mesh" contype="0" conaffinity="0" group="1" material="grey" pos="0 0 0" euler="0 -0 -30" mesh="lidar"/>
@@ -51,6 +51,7 @@
         <site name="hls_lfcd_lds" class="unused" pos="0 0 0.17100000000000001" euler="0 -0 0"/>
       </body>
 
+      <!--<body name="right_wheel_link" pos="-0.11 0 0.03" euler="0.0045263665815347721 89.95437383555452 0.0041825919044565273">-->
       <body name="right_wheel_link" pos="-0.11 0 0.03" euler="0.0045263665815347721 89.95437383555452 0.0041825919044565273">
         <inertial pos="0 0 0" mass="1" fullinertia="0.14583299999999999 0.14583299999999999 0.125 0 0 0"/>
         <geom name="right_wheel_collision" class="unused" type="cylinder"  group = "2" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" />
@@ -114,7 +115,7 @@
         <geom name="left_wheel_collision2" class="unused" type="cylinder"  group = "2" size="0.029999999999999999 0.0074999999999999997" friction="1 0.0050000000000000001 0.0001" />
         <geom name="left_visual2" class="unused" type="mesh" contype="0" conaffinity="0" group="1" size="0.029999999999999999 0.0074999999999999997" material="grey" pos="0 0 0" euler="90 0 0" mesh="left_wheel"/>
         <joint name="left_wheel2" class="unused"  type="hinge" pos="6.9388939039072284e-18 -3.1225022567582528e-17 -1.3877787807814457e-17" axis="0 0 1"/>
-      </body>  
+      </body> 
     </body>
 
 
